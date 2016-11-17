@@ -161,7 +161,7 @@ function check_pawn(old_rank, new_rank, old_file, new_file, test_board, test_pie
 								if(test_pieces[key]['file'] == new_file) {
 
 									//check if the en passant flag matches
-									if(enpassant == key) {
+									if(enpassant == key && simulate == 0) {
 
 										//reset enpassant flag
 										enpassant = 0;
@@ -698,25 +698,24 @@ function check_move(board_space, piece) {
 
     			//prevent castling if king or rook was moved
     			if(piece_id == 1) {
-					var w_queen_side_castle = 0;
-					var w_king_side_castle = 0;
-					alert("CASTLE FLAG: "+w_king_side_castle);
+					w_queen_side_castle = 0;
+					w_king_side_castle = 0;
     			}
     			if(piece_id == 3) {
-    				var w_queen_side_castle = 0;
+    				w_queen_side_castle = 0;
     			}
     			if(piece_id == 4) {
-    				var w_king_side_castle = 0;
+    				w_king_side_castle = 0;
     			}
     			if(piece_id == 17) {
-					var b_queen_side_castle = 0;
-					var b_king_side_castle = 0;
+					b_queen_side_castle = 0;
+					b_king_side_castle = 0;
     			}
     			if(piece_id == 19) {
-    				var b_queen_side_castle = 0;
+    				b_queen_side_castle = 0;
     			}
     			if(piece_id == 20) {
-    				var b_king_side_castle = 0;
+    				b_king_side_castle = 0;
     			}
 
 				//check if we are taking a piece

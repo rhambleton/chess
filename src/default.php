@@ -50,8 +50,8 @@ function take_piece(rank, file, the_board, the_pieces, simulate) {
 						//move the div off the board
 						taken_id = "Piece"+key;
 						taken_piece = document.getElementById(taken_id);
-						taken_piece.style.left = taken_left;
-						taken_piece.style.top = taken_top;
+						taken_piece.style.left = "500px";
+						taken_piece.style.top = "100px";
 						$("#"+taken_id).draggable('disable');						
 					}
 

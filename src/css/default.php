@@ -61,7 +61,7 @@
 				$color = $white_space_color;
 			}
 
-				?>#<?=$space_id;?> {
+					?>#<?=$space_id;?> {
 					background-Color: <?=$color;?>;
 					width: <?=$space_width;?>px;
 					height: <?=$space_height;?>px;

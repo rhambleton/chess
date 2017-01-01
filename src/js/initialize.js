@@ -20,15 +20,6 @@
 		lastMovedPiece : 99,  //used for en passant check
 		takenPieceCount : 0,
 
-		badMove : {
-
-			message : "Not a Valid Move.",
-			invalid : true,
-			pieceTaken : false,
-			takenPiece : 99, //id of taken piece
-			direction : 1 //forward for black is 1, for white -1
-		},
-
 		board : [
 			[18,20,22,17,16,23,21,19],
 			[24,25,26,27,28,29,30,31],
@@ -66,7 +57,7 @@
 				description : "Rook",
 				team : "White",
 				rank : 7,
-				rank : 0,
+				file : 0,
 				piece : "&#9820;",
 				status : "active",
 				moved : 0

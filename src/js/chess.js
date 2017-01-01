@@ -15,7 +15,12 @@ var ChessClass = function() {
     //  .check_vertical = checks for valid vertical movement of a piece
     //  .check_diagonal = checks for valid diagonal movement of a piece
     //  .check_knight = checks for valid movement of a knight
-    //  .check_king = checks for vlaid movement of a king
+    //  .check_king = checks for valid movement of a king
+    //  .resetSim = revert the simulation game state to match the live game state
+    //  .syncSim = force the live game state to match the simulated game state
+    //  .simMode = turn simulation mode on/off by redirecting the this.game pointer to either liveGame or simGame
+    //  .makeMove = make the move on the currently active game objects
+    //  TODO .check_for_check = checks whether a player is in check
     //  .getDirection returns 1 for black, -1 for white - used to represent forward direction
 
 
@@ -30,6 +35,7 @@ var ChessClass = function() {
         	success: function () {
         		self.drawBoard();
         		self.initBoard();
+                self.resetSim();
     		},
         	error: function () {
         		alert('failure');
@@ -39,15 +45,18 @@ var ChessClass = function() {
 
 	//drop game data into this instance of ChessApp (used by initialize.js)
 	this.loadGame = function( data ) {
-		this.game = data;
+        this.simGame = data;
+        this.liveGame = data;
+        this.game = this.liveGame;
 	}, // end loadGame()
 
 	//draw the board on the screen
 	this.drawBoard = function () {
-		
-		//loop over board ranks
+
+    	//loop over board ranks
 		for(rank in this.game.board) {
-			//loop over board files
+			
+            //loop over board files
 			for(file in this.game.board[rank]) {
 
 			    _.templateSettings.variable = "space";
@@ -189,15 +198,15 @@ var ChessClass = function() {
         move.pieceTaken = false;
         move.takenPiece = 99;
         move.direction = this.getDirection(move.piece_id);
+        move.team = this.game.pieces[this.game.board[move.old_rank][move.old_file]].team
 
         //check if the move is valid
         move = this.checkMove(move);
-
         //check if a piece has been taken
-        if(this.game.board[move.new_rank][move.new_file] != 99) {
+        if(this.game.board[move.new_rank][move.new_file] != 99 && move.invalid == false) {
 
             //check if the piece is on our team
-            if (this.game.pieces[this.game.board[move.new_rank][move.new_file]].team = this.game.pieces[this.game.board[move.new_rank][move.new_file]].team) {
+            if (this.game.pieces[this.game.board[move.new_rank][move.new_file]].team == move.team) {
                 move.invalid = true;
                 move.message = "Invalid Move. You cannot take your own piece.";
             }
@@ -209,37 +218,63 @@ var ChessClass = function() {
             }
         }
 
+        //sync the simBoard and simPieces to the liveBoard and livePieces objects
+        this.resetSim();
+        //enter simulation mode (use simGame instead of liveGame)
+        this.simMode("on");
+        //make the move (using the simGame object)
+        this.makeMove(move);
+
+        //check whether the player is in check (on the simBoard)
+        if(this.check_for_check(move.team)) {
+            move.message = "Invalid Move. You cannot move into CHECK.";
+            move.invalid = true;
+        }
+
+        //if the move is valid, update the liveGame to reflect the move
+        if(move.invalid == false) { this.syncSim(); }
+
+        //turn of simMode
+        this.simMode("off");
+
         //if move is valid - update the board and pieces objects
         if(move.invalid == false) {
 
             //if a piece has been taken - then remove it from the board
             if(move.pieceTaken == true) {
-                this.game.pieces[move.takenPiece].status = "taken";
-                this.game.pieces[move.takenPiece].rank = 8;
-                this.game.pieces[move.takenPiece].file = 8;
                 this.clearPiece(move.takenPiece);
             }
 
-            //update the board and pieces objects
-            this.game.board[move.old_rank][move.old_file] = 99;
-            this.game.board[move.new_rank][move.new_file] = move.piece_id;
-            this.game.pieces[move.piece_id].rank = move.new_rank;
-            this.game.pieces[move.piece_id].file = move.new_file;
-            this.game.pieces[move.piece_id].moved = 1;
+            //track the last moved piece
             this.game.lastMovedPiece = move.piece_id;
         } 
 
+        //reset the simBoard to match the current game state
+        this.resetSim();
+
+        //check if we have put the other team in check
+        var chkteam = "White";
+        if(move.team == "White") {
+            chkteam = "Black";
+        }
+        if(this.check_for_check(chkteam)) {
+            move.message = chkteam+" is in CHECK!";
+        }
+  
         //output appropriate message
-          this.outputMessage(move.message);
+        this.outputMessage(move.message);
 
         //return "false" to confirm move; "true" to reject it
-          return move.invalid;
+        return move.invalid;
 
     }, // end of processMove()
 
     this.checkMove = function (move) {
 
-        //call piece specific checks
+        //verify the piece is actually being moved
+        if(move.old_rank != move.new_rank || move.old_file != move.new_file) {
+
+            //call piece specific checks
             switch(move.piece_type) {
 
                 case "Pawn" :
@@ -273,10 +308,20 @@ var ChessClass = function() {
                     else if ( move.old_file == move.new_file ) { move = this.check_vertical(move); }
                     else { move = this.check_diagonal(move); }
                     break;
-            }
+                
+            } // end of piece specific checks
+
+        }
+        else
+        {
+            //start and end locations are the same - piece is not moving
+            move.message = "Invalid Move - Start and End Locations are the Same.";
+            move.invalid = true;
+
+        } // end of check that piece is actually moving
 
         //return move object
-            return move;
+        return move;
 
     }, // end of checkMove()
 
@@ -306,6 +351,7 @@ var ChessClass = function() {
                 //allow initial 2 square move
                 if(move.direction*(move.new_rank-move.old_rank) == 2 && this.game.pieces[move.piece_id].moved == 0)
                 {
+
                     //make sure the middle space and the new space are both empty
                     if (this.game.board[move.new_rank][move.new_file] != 99 || this.game.board[move.new_rank-move.direction][move.new_file] != 99)
                     {
@@ -366,8 +412,7 @@ var ChessClass = function() {
                         if(this.game.pieces[this.game.lastMovedPiece].description == "Pawn") {
 
                             //check if the last moved piece is on our team or the other team
-                            console.log(this.game.pieces[this.game.lastMovedPiece].team+" "+this.game.pieces[move.piece_id].team);
-                            if(this.game.pieces[this.game.lastMovedPiece].team != this.game.pieces[move.piece_id].team) {
+                            if(this.game.pieces[this.game.lastMovedPiece].team != move.team) {
 
                                 //valid enpassant move
                                 move.message = "En Passant!";
@@ -482,7 +527,8 @@ var ChessClass = function() {
 
                     if(move.new_rank == move.old_rank + movement) {
                         //we are only moving 1 square - so nothing can be in the way
-                    return true;
+                        move.invalid = false;
+                        return move;
                 }
                 else
                 {
@@ -565,7 +611,7 @@ var ChessClass = function() {
             //check if we are trying to take a piece
             if(this.game.board[move.new_rank][move.new_file] != 99) {
                 //check if it our own piece
-                if(this.game.pieces[this.game.board[move.new_rank][move.new_file]].team != this.game.pieces[move.piece_id].team) {
+                if(move.team != this.game.pieces[this.game.board[move.new_rank][move.new_file]].team) {
                     move.message = "Piece Taken!";
                     move.invalid = false;
                     move.pieceTaken = true;
@@ -591,8 +637,232 @@ var ChessClass = function() {
     }, // end of check_knight()
 
     this.check_king = function (move) {
+
+        if (Math.abs(move.old_rank-move.new_rank) <= 1 && Math.abs(move.old_file-move.new_file) <= 1) {
+
+            move.message = "Valid Move.";
+            move.invalid = false;
+
+        } //end check for simple move
+        else
+        {
+          
+            // check for possible castle
+            if(move.old_rank == move.new_rank && Math.abs(move.old_file-move.new_file) == 2) {
+
+                //looks like someone may be trying to castle - lets check a bit deeper
+                if((move.team == "White" && move.new_rank == 7) || (move.team == "Black" && move.new_rank == 0)) {
+
+                    //definitely looks like a castle - but which side
+                    if(move.new_file < move.old_file) {
+
+                        // looks like a queen side castle
+                        //we will need to make sure these files are empty
+                        var empty_file_1 = 1;
+                        var empty_file_2 = 2;
+                        var new_rook_file = 3;
+
+                        //set the piece id's for the involved pieces
+                        switch(move.team) {
+
+                            case "White":
+
+                                var king_piece_id = 0;
+                                var rook_piece_id = 2;
+                                break;
+
+                            case "Black":
+
+                                var king_piece_id = 16;
+                                var rook_piece_id = 18;
+                                break;
+
+                        } // end switch to set the piece id's
+                    }
+                    else
+                    {
+                        //looks like a king side castle
+                        //we will need to make sure these files are empty
+                        var empty_file_1 = 5;
+                        var empty_file_2 = 6;
+                        var new_rook_file = 5;
+
+                        //set the piece id's for the involved pieces
+                        switch(move.team) {
+
+                            case "White":
+
+                                var king_piece_id = 0;
+                                var rook_piece_id = 3;
+                                break;
+
+                            case "Black":
+
+                                var king_piece_id = 16;
+                                var rook_piece_id = 19;
+                                break;
+
+                        } // end switch to set the piece id's
+
+                    } //end if - check whether king or queen side castle
+
+                    // check if either piece has been moved
+                    if (this.game.pieces[king_piece_id].moved == 0 && this.game.pieces[rook_piece_id].moved == 0) {
+
+                        //neither piece has moved - check if the intermediate spaces are empty
+                        if(this.game.board[move.new_rank][empty_file_1] == 99 && this.game.board[move.new_rank][empty_file_2] == 99) {
+
+                            //move the rook to the proper position
+                            var rook_element_id = "Piece"+rook_piece_id;
+                            var new_file = new_rook_file;
+                            var castle_left = (this.game.config.space_width+this.game.config.space_border_size)*new_rook_file+this.game.config.left_edge_width;
+                            castle_rook = document.getElementById(rook_element_id);
+                            castle_rook.style.left = castle_left+"px";
+                            this.game.pieces[rook_piece_id].file = new_rook_file;
+
+                            //confirm the valid movement of the king
+                            move.message = "Valid Move - Castle.";
+                            move.invalid = false;
+
+                        }
+                        else
+                        {
+                            //pieces are in the way
+                            move.message = "Invalid Move - there is somethig in the way.";
+                            move.invalid = true;
+
+                        } // end check that intermediate spaces are empty
+
+                    }
+                    else
+                    {
+                        // pieces have already moved
+                        move.message = "Invalid Move: You cannot castle now.";
+                        move.invalid = true;
+
+                    }
+
+                } // end check for proper rank to be a castle
+
+            } // end check for movement within a single rank
+
+        }
+        
         return move;
-    },  // end of check_knight()
+
+    },  // end of check_king()
+
+    this.syncSim = function() {
+
+        //copy simGame object into liveGame object
+        this.liveGame = JSON.parse(JSON.stringify(this.simGame));
+        return true;
+    
+    } // end of sync_sim()
+
+    this.resetSim = function() {
+
+        //copy liveGame object into simGame object
+        this.simGame = JSON.parse(JSON.stringify(this.liveGame));
+        return true;
+    
+    } // end of sync_sim()
+
+
+    this.simMode = function(mode) {
+
+        switch(mode) {
+            case "on" :
+                this.game = this.simGame;
+                break;
+
+            case "off" :
+                this.game = this.liveGame;
+                break
+        } // end mode switch
+    
+    } // end simMode()
+
+    this.makeMove = function(move) {
+
+        //if move is valid - update the board and pieces objects
+        if(move.invalid == false) {
+
+            //if a piece has been taken - then remove it from the board
+            if(move.pieceTaken == true) {
+                this.game.pieces[move.takenPiece].status = "taken";
+                this.game.pieces[move.takenPiece].rank = 8;
+                this.game.pieces[move.takenPiece].file = 8;
+            }
+
+            //update the board and pieces objects
+            this.game.board[move.old_rank][move.old_file] = 99;
+            this.game.board[move.new_rank][move.new_file] = +move.piece_id;
+            this.game.pieces[move.piece_id].rank = move.new_rank;
+            this.game.pieces[move.piece_id].file = move.new_file;
+            this.game.pieces[move.piece_id].moved = 1;
+        } 
+
+    } // end makeMove()
+
+
+
+    this.check_for_check = function (team) {
+
+        var current_piece = 99;
+
+        //figure out which piece to start with
+        switch (team) {
+
+            case "Black" :
+                //checking if black is in check, so loop over white pieces
+                var start_piece = 1
+                var end_piece = 15;
+                var king_id = 16;
+                break;
+
+            case "White" :
+                //checking if What is in check, so loop over black pieces
+                var start_piece = 17;
+                var end_piece = 31;
+                var king_id = 0;
+                break;
+        }
+
+        //loop over all pieces of the other team
+        for(current_piece = start_piece; current_piece <= end_piece; current_piece++) {
+
+            //check if this piece can take the king in the test environment
+            //convert input data to move object
+            var tstmove = {};
+            tstmove.new_rank = this.game.pieces[king_id].rank;
+            tstmove.new_file = this.game.pieces[king_id].file;
+            tstmove.piece_id = current_piece;
+
+            tstmove.old_rank = this.game.pieces[tstmove.piece_id].rank;
+            tstmove.old_file = this.game.pieces[tstmove.piece_id].file;
+            tstmove.piece_type = this.game.pieces[tstmove.piece_id].description;
+
+            tstmove.invalid = true;
+            tstmove.message = "Invalid Move.";
+            tstmove.pieceTaken = false;
+            tstmove.takenPiece = 99;
+            tstmove.direction = this.getDirection(tstmove.piece_id);
+            tstmove.team = this.game.pieces[tstmove.piece_id].team
+
+            //check if the move is valid
+            tstmove = this.checkMove(tstmove);
+
+            if(tstmove.invalid == false) {
+                return true;
+            }
+
+        }
+
+        return false;
+
+    }, // end of check_for_check()
+
 
     this.getDirection = function (piece_id) {
         if(this.game.pieces[piece_id].team == "Black") {

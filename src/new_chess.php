@@ -42,6 +42,27 @@
       ">
         &nbsp;
       </div>
+      <div 
+        id="taken-area"
+        style = "
+          background-Color: #DDDDDD;
+          color: #DD0000;
+          width: 200px;
+          height: 416px;
+          margin-left: 0px;
+          margin-right: 0px;
+          border: 1px;
+          border-style: solid;
+          border-color: #000000;
+          position: absolute;
+          top: 25px;
+          left: 518px;
+          z-index: -5;
+          text-align: Center;
+      ">
+        &nbsp;
+      </div>
+
     </div>
 
 

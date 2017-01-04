@@ -20,7 +20,9 @@ var ChessClass = function() {
     //  .syncSim = force the live game state to match the simulated game state
     //  .simMode = turn simulation mode on/off by redirecting the this.game pointer to either liveGame or simGame
     //  .makeMove = make the move on the currently active game objects
-    //  TODO .check_for_check = checks whether a player is in check
+    //  .check_for_check = checks whether a player is in check
+    //  .check_for_mate = checks whether a player has any valid moves left
+    //  .checkmate = end the game and display the winner - provide method to restart
     //  .getDirection returns 1 for black, -1 for white - used to represent forward direction
 
 
@@ -229,7 +231,7 @@ var ChessClass = function() {
         if(this.check_for_check(move.team)) {
             move.message = "Invalid Move. You cannot move into CHECK.";
             move.invalid = true;
-        }
+        } // end of check_for_check()
 
         //if the move is valid, update the liveGame to reflect the move
         if(move.invalid == false) { this.syncSim(); }
@@ -259,6 +261,10 @@ var ChessClass = function() {
         }
         if(this.check_for_check(chkteam)) {
             move.message = chkteam+" is in CHECK!";
+        }
+
+        if(this.check_for_mate(chkteam)) {
+            this.checkmate(chkteam);
         }
   
         //output appropriate message
@@ -863,6 +869,50 @@ var ChessClass = function() {
 
     }, // end of check_for_check()
 
+    this.check_for_mate = function(team) {
+
+        //define piece id range based on team
+        switch (team) {
+
+            case "Black" :
+                //checking if black is in checkmate, so loop over white pieces
+                var start_piece = 1
+                var end_piece = 15;
+                var king_id = 16;
+                break;
+
+            case "White" :
+                //checking if White is in checkmate, so loop over black pieces
+                var start_piece = 17;
+                var end_piece = 31;
+                var king_id = 0;
+                break;
+        }
+
+        //loop over all pieces of the other team
+        for(current_piece = start_piece; current_piece <= end_piece; current_piece++) {
+
+            //loop over all board spaces
+            for(new_rank = 0; new_rank <= 7; new_rank++) {
+                for(new_file = 0; new_file <= 7; new_file++) {
+
+                    //check if this piece can move to that space
+                        //if the move is valid - exit (return false)
+
+
+                }
+            } //end loop over all board spaces
+        } //end loop over all pieces
+        // TODO return true;
+        return false;
+
+    }, // end of check_for_mate()
+
+
+    this.checkmate = function(team) {
+        this.outputMessage("CHECKMATE!");
+        process.exit();        
+    }
 
     this.getDirection = function (piece_id) {
         if(this.game.pieces[piece_id].team == "Black") {

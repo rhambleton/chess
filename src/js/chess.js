@@ -16,9 +16,6 @@ var ChessClass = function() {
     //  .check_diagonal = checks for valid diagonal movement of a piece
     //  .check_knight = checks for valid movement of a knight
     //  .check_king = checks for valid movement of a king
-    //  .resetSim = revert the simulation game state to match the live game state
-    //  .syncSim = force the live game state to match the simulated game state
-    //  .simMode = turn simulation mode on/off by redirecting the this.game pointer to either liveGame or simGame
     //  .makeMove = make the move on the currently active game objects
     //  .check_for_check = checks whether a player is in check
     //  .check_for_mate = checks whether a player has any valid moves left
@@ -37,7 +34,6 @@ var ChessClass = function() {
         	success: function () {
         		self.drawBoard();
         		self.initBoard();
-                self.resetSim();
     		},
         	error: function () {
         		alert('failure');
@@ -47,9 +43,7 @@ var ChessClass = function() {
 
 	//drop game data into this instance of ChessApp (used by initialize.js)
 	this.loadGame = function( data ) {
-        this.simGame = data;
-        this.liveGame = data;
-        this.game = this.liveGame;
+        this.game = data;
 	}, // end loadGame()
 
 	//draw the board on the screen
@@ -204,6 +198,7 @@ var ChessClass = function() {
 
         //check if the move is valid
         move = this.checkMove(move);
+
         //check if a piece has been taken
         if(this.game.board[move.new_rank][move.new_file] != 99 && move.invalid == false) {
 
@@ -220,28 +215,18 @@ var ChessClass = function() {
             }
         }
 
-        //sync the simBoard and simPieces to the liveBoard and livePieces objects
-        this.resetSim();
-        //enter simulation mode (use simGame instead of liveGame)
-        this.simMode("on");
-        //make the move (using the simGame object)
-        this.makeMove(move);
-
-        //check whether the player is in check (on the simBoard)
-        if(this.check_for_check(move.team)) {
+        //check whether the player is moving into check
+        if(this.check_for_check(move)) {
             move.message = "Invalid Move. You cannot move into CHECK.";
             move.invalid = true;
         } // end of check_for_check()
 
-        //if the move is valid, update the liveGame to reflect the move
-        if(move.invalid == false) { this.syncSim(); }
+        //if the move is valid then make the move
+        if(move.invalid == false) { 
 
-        //turn of simMode
-        this.simMode("off");
-
-        //if move is valid - update the board and pieces objects
-        if(move.invalid == false) {
-
+            //make the move
+            this.makeMove(move);
+  
             //if a piece has been taken - then remove it from the board
             if(move.pieceTaken == true) {
                 this.clearPiece(move.takenPiece);
@@ -250,9 +235,6 @@ var ChessClass = function() {
             //track the last moved piece
             this.game.lastMovedPiece = move.piece_id;
         } 
-
-        //reset the simBoard to match the current game state
-        this.resetSim();
 
         //check if we have put the other team in check
         var chkteam = "White";
@@ -758,36 +740,6 @@ var ChessClass = function() {
 
     },  // end of check_king()
 
-    this.syncSim = function() {
-
-        //copy simGame object into liveGame object
-        this.liveGame = JSON.parse(JSON.stringify(this.simGame));
-        return true;
-    
-    } // end of sync_sim()
-
-    this.resetSim = function() {
-
-        //copy liveGame object into simGame object
-        this.simGame = JSON.parse(JSON.stringify(this.liveGame));
-        return true;
-    
-    } // end of sync_sim()
-
-
-    this.simMode = function(mode) {
-
-        switch(mode) {
-            case "on" :
-                this.game = this.simGame;
-                break;
-
-            case "off" :
-                this.game = this.liveGame;
-                break
-        } // end mode switch
-    
-    } // end simMode()
 
     this.makeMove = function(move) {
 
@@ -811,9 +763,23 @@ var ChessClass = function() {
 
     } // end makeMove()
 
+    this.check_for_check = function (moveData) {
 
+        //duplicate the gameboard (so we can restore it when we are done checking things)
+        var savedGame = JSON.parse(JSON.stringify(this.game));
 
-    this.check_for_check = function (team) {
+        if(moveData.team == "White" || moveData.team == "Black") {
+
+            //we have a full blown move object to apply first
+            this.makeMove(moveData)
+            var team = move.team
+
+        }
+        else { 
+
+            var team = moveData; 
+
+        }
 
         var current_piece = 99;
 
@@ -828,7 +794,7 @@ var ChessClass = function() {
                 break;
 
             case "White" :
-                //checking if What is in check, so loop over black pieces
+                //checking if White is in check, so loop over black pieces
                 var start_piece = 17;
                 var end_piece = 31;
                 var king_id = 0;
@@ -838,7 +804,7 @@ var ChessClass = function() {
         //loop over all pieces of the other team
         for(current_piece = start_piece; current_piece <= end_piece; current_piece++) {
 
-            //check if this piece can take the king in the test environment
+            //check if this piece can take the king
             //convert input data to move object
             var tstmove = {};
             tstmove.new_rank = this.game.pieces[king_id].rank;
@@ -856,36 +822,47 @@ var ChessClass = function() {
             tstmove.direction = this.getDirection(tstmove.piece_id);
             tstmove.team = this.game.pieces[tstmove.piece_id].team
 
+            if(tstmove.piece_type == 17) {
+                alert("Checking if the black queen can attack the king!");
+            }
+
             //check if the move is valid
             tstmove = this.checkMove(tstmove);
 
             if(tstmove.invalid == false) {
+
+                //revert the game state and return true
+                this.game = JSON.parse(JSON.stringify(savedGame));
                 return true;
             }
 
         }
 
+        //revert the game state and return false
+        this.game = JSON.parse(JSON.stringify(savedGame));
         return false;
 
     }, // end of check_for_check()
 
     this.check_for_mate = function(team) {
 
+        //duplicate the gameboard (so we can restore it when we are done checking things)
+        var backupGame = JSON.parse(JSON.stringify(this.game));
+
         //define piece id range based on team
         switch (team) {
 
-            case "Black" :
-                //checking if black is in checkmate, so loop over white pieces
-                var start_piece = 1
+            case "White" :
+                //checking if white is in checkmate, so loop over white pieces
+                console.log("checking if white is in checkmate");
+                var start_piece = 0
                 var end_piece = 15;
-                var king_id = 16;
                 break;
 
-            case "White" :
-                //checking if White is in checkmate, so loop over black pieces
-                var start_piece = 17;
+            case "Black" :
+                //checking if black is in checkmate, so loop over black pieces
+                var start_piece = 16;
                 var end_piece = 31;
-                var king_id = 0;
                 break;
         }
 
@@ -896,15 +873,66 @@ var ChessClass = function() {
             for(new_rank = 0; new_rank <= 7; new_rank++) {
                 for(new_file = 0; new_file <= 7; new_file++) {
 
+                    //build the test move object
+                    var testmove = {};
+                    testmove.new_rank = new_rank;
+                    testmove.new_file = new_file;
+                    testmove.piece_id = current_piece;
+
+                    testmove.old_rank = this.game.pieces[testmove.piece_id].rank;
+                    testmove.old_file = this.game.pieces[testmove.piece_id].file;
+                    testmove.piece_type = this.game.pieces[testmove.piece_id].description;
+
+                    testmove.invalid = true;
+                    testmove.message = "Invalid Move.";
+                    testmove.pieceTaken = false;
+                    testmove.takenPiece = 99;
+                    testmove.direction = this.getDirection(testmove.piece_id);
+                    testmove.team = this.game.pieces[testmove.piece_id].team;
+
+                    //check if the move is valid
+                    testmove = this.checkMove(testmove);
+
+                    //check if a piece has been taken
+                    if(this.game.board[testmove.new_rank][testmove.new_file] != 99 && testmove.invalid == false) {
+
+                        //check if the piece is on our team
+                        if (this.game.pieces[this.game.board[testmove.new_rank][testmove.new_file]].team == testmove.team) {
+                            testmove.invalid = true;
+                            testmove.message = "Invalid Move. You cannot take your own piece.";
+                        }
+                        else
+                        {
+                            testmove.pieceTaken = true;
+                            testmove.takenPiece = this.game.board[testmove.new_rank][testmove.new_file];
+                            testmove.message = "Piece Taken!";
+                        }
+                    }
+
+                    //THIS DOESNT WORK - WHY NOT????!!!                    
+                    if(this.check_for_check(testmove)) {
+                        testmove.message = "Invalid Move. You cannot move into CHECK.";
+                        testmove.invalid = true;
+                    } // end of check_for_check()
+
                     //check if this piece can move to that space
-                        //if the move is valid - exit (return false)
+                    if(testmove.invalid == false) {
 
+                        console.log("VALID: "+testmove.piece_id+": "+testmove.team+" "+testmove.piece_type+" to "+testmove.new_rank+":"+testmove.new_file);
 
-                }
-            } //end loop over all board spaces
+                        //at least one valid move exists - reset the game board
+                        this.game = JSON.parse(JSON.stringify(backupGame));
+
+                        //return false - the team is NOT in checkmate
+                        return false;
+
+                    } // end check for a valid move
+                } //end loop over all files
+            } //end loop over all ranks
         } //end loop over all pieces
-        // TODO return true;
-        return false;
+
+        // return true - no valid moves found
+        return true;
 
     }, // end of check_for_mate()
 

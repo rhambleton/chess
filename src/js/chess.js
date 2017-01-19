@@ -20,6 +20,7 @@ var ChessClass = function() {
     //  .check_for_check = checks whether a player is in check
     //  .check_for_mate = checks whether a player has any valid moves left
     //  .checkmate = end the game and display the winner - provide method to restart
+    //  .toggle_turn = toggle the current turn between the two teams and output the corresponding message
     //  .getDirection returns 1 for black, -1 for white - used to represent forward direction
 
 

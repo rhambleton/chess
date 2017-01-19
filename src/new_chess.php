@@ -23,6 +23,26 @@
     <div id="chess-container">
       <div id="chess-main"></div>
       <div
+        id="turnMessage"
+        style = "
+          background-Color: #DDDDDD;
+          color: #DD0000;
+          width: 420px;
+          height: 20px;
+          margin-left: 0px;
+          margin-right: 0px;
+          border: 1px;
+          border-style: solid;
+          border-color: #000000;
+          position: absolute;
+          top: 450px;
+          left: 25px;
+          z-index: -5;
+          text-align: Center;
+      ">
+        &nbsp;
+      </div>
+      <div
         id="message_text"
         style = "
           background-Color: #DDDDDD;
@@ -35,7 +55,7 @@
           border-style: solid;
           border-color: #000000;
           position: absolute;
-          top: 490px;
+          top: 480px;
           left: 25px;
           z-index: -5;
           text-align: Center;
@@ -62,7 +82,7 @@
       ">
         &nbsp;
       </div>
-
+      <div style="Position: absolute; top: 520px; left: 20px;" id="debug"></div>
     </div>
 
 

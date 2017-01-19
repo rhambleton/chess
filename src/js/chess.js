@@ -50,10 +50,10 @@ var ChessClass = function() {
 	this.drawBoard = function () {
 
     	//loop over board ranks
-		for(rank in this.game.board) {
+		for(var rank in this.game.board) {
 			
             //loop over board files
-			for(file in this.game.board[rank]) {
+			for(var file in this.game.board[rank]) {
 
 			    _.templateSettings.variable = "space";
 
@@ -108,6 +108,7 @@ var ChessClass = function() {
 
 		} // end loop over each rank 
 
+        $("#turnMessage").html("<b>&nbsp;Current Move: </b>White");
         this.outputMessage("Ready to Play!");
 
 	}, // end drawBoard()
@@ -129,15 +130,15 @@ var ChessClass = function() {
         this.game.takenPieceCount++;
         
         //calculate location of taken piece
-        taken_row = Math.ceil(this.game.takenPieceCount / this.game.config.taken_pool_column_count);
-        taken_column = this.game.takenPieceCount - ((taken_row-1)*this.game.config.taken_pool_column_count);
+        var taken_row = Math.ceil(this.game.takenPieceCount / this.game.config.taken_pool_column_count);
+        var taken_column = this.game.takenPieceCount - ((taken_row-1)*this.game.config.taken_pool_column_count);
         
-        taken_left = (4*this.game.config.left_edge_width)+(8*(this.game.config.space_width+this.game.config.space_border_size)) + ((taken_column-1) * this.game.config.space_width+this.game.config.space_border_size);
-        taken_top = this.game.config.top_edge_width + (taken_row-1) * this.game.config.space_height+this.game.config.space_border_size;
+        var taken_left = (4*this.game.config.left_edge_width)+(8*(this.game.config.space_width+this.game.config.space_border_size)) + ((taken_column-1) * this.game.config.space_width+this.game.config.space_border_size);
+        var taken_top = this.game.config.top_edge_width + (taken_row-1) * this.game.config.space_height+this.game.config.space_border_size;
 
         //move the div off the board
-        taken_id = "Piece"+piece_id;
-        taken_piece = document.getElementById(taken_id);
+        var taken_id = "Piece"+piece_id;
+        var taken_piece = document.getElementById(taken_id);
         taken_piece.style.left = taken_left+"px";
         taken_piece.style.top = taken_top+"px";
         $("#"+taken_id).draggable('disable');
@@ -147,25 +148,25 @@ var ChessClass = function() {
 	//setup the drag and drop handlers for the board
 	this.initBoard = function () {
 		
-        containtment_left = this.game.config.left_edge_width;
-        containment_top = this.game.config.top_edge_width;
-        containment_right = (this.game.config.space_width + this.game.config.space_border_size)*(8-1)+this.game.config.left_edge_width
-        containment_bottom = (this.game.config.space_height + this.game.config.space_border_size)*(8-1)+this.game.config.top_edge_width;
+        var containtment_left = this.game.config.left_edge_width;
+        var containment_top = this.game.config.top_edge_width;
+        var containment_right = (this.game.config.space_width + this.game.config.space_border_size)*(8-1)+this.game.config.left_edge_width
+        var containment_bottom = (this.game.config.space_height + this.game.config.space_border_size)*(8-1)+this.game.config.top_edge_width;
 
         //make all the space droppable
-        for(this_rank in this.game.board) {
-            for(this_file in this.game.board[this_rank]) {
+        for(var this_rank in this.game.board) {
+            for(var this_file in this.game.board[this_rank]) {
 
-                space_selector = "#space"+this_rank+"-"+this_file;
+                var space_selector = "#space"+this_rank+"-"+this_file;
                 $(space_selector).droppable({});
 
             }
         } // end loop to make all spaces droppable
 
         //make all the pieces draggable
-        for(this_piece in this.game.pieces) {
+        for(var this_piece in this.game.pieces) {
                 
-                piece_selector = "#Piece"+this_piece;
+                var piece_selector = "#Piece"+this_piece;
 
                 $(piece_selector).draggable({
                     containment: [containtment_left,containment_top,containment_right,containment_bottom],
@@ -182,7 +183,7 @@ var ChessClass = function() {
     this.processMove = function (boardSpace, piece) {
 
         //convert input data to move object
-        move = {};
+        var move = {};
         move.new_rank = boardSpace.attr('id').substring(5,6);
         move.new_file = boardSpace.attr('id').substring(7,8);
         move.piece_id = piece.attr('id').substring(5,7);
@@ -196,8 +197,27 @@ var ChessClass = function() {
         move.direction = this.getDirection(move.piece_id);
         move.team = this.game.pieces[this.game.board[move.old_rank][move.old_file]].team
 
-        //check if the move is valid
-        move = this.checkMove(move);
+        //check if it is our turn
+        if(move.team == this.game.currentTurn) {
+
+            // it is our turn - so check if the move is valid
+            move = this.checkMove(move);
+
+        } // end of check that it is our turn
+        else
+        {   
+            //it isn't our turn - this move is NOT valid
+            move.message = "Invalid Move - It is "+this.game.currentTurn+"'s Turn.";
+            move.invalid = true;
+        }
+
+        //check if we are physically trying to take a king
+        if(this.game.board[move.new_rank][move.new_file] != 99) {
+            if(this.game.pieces[this.game.board[move.new_rank][move.new_file]].description == "King") {
+                move.invalid = true;
+                move.message = "You cannot take the king.";
+            }
+        }
 
         //check if a piece has been taken
         if(this.game.board[move.new_rank][move.new_file] != 99 && move.invalid == false) {
@@ -234,6 +254,9 @@ var ChessClass = function() {
 
             //track the last moved piece
             this.game.lastMovedPiece = move.piece_id;
+
+            //toggle the move
+            this.game.currentTurn = this.toggle_turn();
         } 
 
         //check if we have put the other team in check
@@ -246,7 +269,9 @@ var ChessClass = function() {
         }
 
         if(this.check_for_mate(chkteam)) {
-            this.checkmate(chkteam);
+            $("#turnMessage").html("CHECKMATE! "+move.team+" Wins!");
+            move.message = "<button style='position: absolute; top: 5px; left: 120px;' onclick='javascript:location.reload();''>Click Here to Play Again</button>";
+            $("#message_text" ).height("40px");
         }
   
         //output appropriate message
@@ -298,7 +323,6 @@ var ChessClass = function() {
                     break;
                 
             } // end of piece specific checks
-
         }
         else
         {
@@ -436,7 +460,7 @@ var ChessClass = function() {
     this.check_horizontal = function (move) {
 
         //figure out which way we are moving
-        movement = -1;
+        var movement = -1;
         if(move.old_file < move.new_file) {
                 movement = 1;
         }
@@ -493,7 +517,7 @@ var ChessClass = function() {
         this.check_vertical = function (move) {
 
             //figure out which way we are moving
-            movement = -1;
+            var movement = -1;
             if(move.old_rank < move.new_rank) {
                 movement = 1;
             }
@@ -521,8 +545,8 @@ var ChessClass = function() {
                 else
                 {
                     //check if their are any pieces in the way
-                    current_rank = +move.old_rank + movement;
-                    path_clear = 1;
+                    var current_rank = +move.old_rank + movement;
+                    var path_clear = 1;
                     while(current_rank != move.new_rank) {
 
                         //if we found a piece, mark the move invalid
@@ -550,11 +574,11 @@ var ChessClass = function() {
     this.check_diagonal = function (move) {
 
         //figure out which way we are moving
-        file_movement = -1;
+        var file_movement = -1;
         if(move.old_file < move.new_file) {
             file_movement = 1;
         }
-        rank_movement = -1;
+        var rank_movement = -1;
         if(move.old_rank < move.new_rank) {
             rank_movement = 1;
         }
@@ -568,7 +592,7 @@ var ChessClass = function() {
             //check the path is clear
             current_rank = +move.old_rank + rank_movement;
             current_file = +move.old_file + file_movement;
-            path_clear = 1;
+            var path_clear = 1;
             while(current_file != move.new_file && current_rank != move.new_rank) {
 
                 if(this.game.board[current_rank][current_file] != 99) {
@@ -704,7 +728,7 @@ var ChessClass = function() {
                             var rook_element_id = "Piece"+rook_piece_id;
                             var new_file = new_rook_file;
                             var castle_left = (this.game.config.space_width+this.game.config.space_border_size)*new_rook_file+this.game.config.left_edge_width;
-                            castle_rook = document.getElementById(rook_element_id);
+                            var castle_rook = document.getElementById(rook_element_id);
                             castle_rook.style.left = castle_left+"px";
                             this.game.pieces[rook_piece_id].file = new_rook_file;
 
@@ -772,7 +796,7 @@ var ChessClass = function() {
 
             //we have a full blown move object to apply first
             this.makeMove(moveData)
-            var team = move.team
+            var team = moveData.team
 
         }
         else { 
@@ -822,10 +846,6 @@ var ChessClass = function() {
             tstmove.direction = this.getDirection(tstmove.piece_id);
             tstmove.team = this.game.pieces[tstmove.piece_id].team
 
-            if(tstmove.piece_type == 17) {
-                alert("Checking if the black queen can attack the king!");
-            }
-
             //check if the move is valid
             tstmove = this.checkMove(tstmove);
 
@@ -837,6 +857,8 @@ var ChessClass = function() {
             }
 
         }
+
+        //no pieces can attack the king - so we are NOT in check
 
         //revert the game state and return false
         this.game = JSON.parse(JSON.stringify(savedGame));
@@ -854,7 +876,6 @@ var ChessClass = function() {
 
             case "White" :
                 //checking if white is in checkmate, so loop over white pieces
-                console.log("checking if white is in checkmate");
                 var start_piece = 0
                 var end_piece = 15;
                 break;
@@ -866,12 +887,13 @@ var ChessClass = function() {
                 break;
         }
 
-        //loop over all pieces of the other team
-        for(current_piece = start_piece; current_piece <= end_piece; current_piece++) {
+        //loop over all pieces of the current team
+        for(var current_piece = start_piece; current_piece <= end_piece; current_piece++) {
 
             //loop over all board spaces
-            for(new_rank = 0; new_rank <= 7; new_rank++) {
-                for(new_file = 0; new_file <= 7; new_file++) {
+            for(var new_rank = 0; new_rank <= 7; new_rank++) {
+
+                for(var new_file = 0; new_file <= 7; new_file++) {
 
                     //build the test move object
                     var testmove = {};
@@ -909,7 +931,6 @@ var ChessClass = function() {
                         }
                     }
 
-                    //THIS DOESNT WORK - WHY NOT????!!!                    
                     if(this.check_for_check(testmove)) {
                         testmove.message = "Invalid Move. You cannot move into CHECK.";
                         testmove.invalid = true;
@@ -917,8 +938,6 @@ var ChessClass = function() {
 
                     //check if this piece can move to that space
                     if(testmove.invalid == false) {
-
-                        console.log("VALID: "+testmove.piece_id+": "+testmove.team+" "+testmove.piece_type+" to "+testmove.new_rank+":"+testmove.new_file);
 
                         //at least one valid move exists - reset the game board
                         this.game = JSON.parse(JSON.stringify(backupGame));
@@ -939,8 +958,21 @@ var ChessClass = function() {
 
     this.checkmate = function(team) {
         this.outputMessage("CHECKMATE!");
-        process.exit();        
     }
+
+    this.toggle_turn = function() {
+
+        switch (this.game.currentTurn) {
+            case "White":
+                $("#turnMessage" ).html("<b>&nbsp;Current Move: </b>Black");
+                return "Black";
+                break;
+            case "Black":
+                $("#turnMessage").html("<b>&nbsp;Current Move: </b>White");
+                return "White";
+                break;
+        }
+    } // end toggle_turn()
 
     this.getDirection = function (piece_id) {
         if(this.game.pieces[piece_id].team == "Black") {

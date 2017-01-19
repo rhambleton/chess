@@ -19,6 +19,7 @@
 
 		lastMovedPiece : 99,  //used for en passant check
 		takenPieceCount : 0,
+		currentTurn : "White",
 
 		board : [
 			[18,20,22,17,16,23,21,19],

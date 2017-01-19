@@ -506,13 +506,13 @@ function output_message(message) {
 
 function toggle_turn() {
 
-	switch (current_turn) {
+	switch (this.currentTurn) {
 		case "White":
-			$("#turn_text" ).html("<b>&nbsp;Current Move: </b>Black");
+			$("#turnText" ).html("<b>&nbsp;Current Move: </b>Black");
 			return "Black";
 			break;
 		case "Black":
-			$("#turn_text").html("<b>&nbsp;Current Move: </b>White");
+			$("#turnText").html("<b>&nbsp;Current Move: </b>White");
 			return "White";
 			break;
 	}

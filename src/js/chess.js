@@ -3,7 +3,7 @@ var ChessClass = function() {
 
     //  .initGame = load initial game board/pieces objects from intialize.js
     //  .loadGame = used by initialize.js to load the objects into 'this'
-    //  .drawBoard = draws the board based on the current stage of the board and pieces objects
+    //  .drawBoard = draws the board based on the current state of the board and pieces objects
     //  .outputMessage = outputs a text based message in the message <div> below the board
     //  .clearBoard = removes all content from within the main chess <div> = clears the display
     //  .clearPiece = remove a taken piece from the board
@@ -16,13 +16,55 @@ var ChessClass = function() {
     //  .check_diagonal = checks for valid diagonal movement of a piece
     //  .check_knight = checks for valid movement of a knight
     //  .check_king = checks for valid movement of a king
-    //  .makeMove = make the move on the currently active game objects
-    //  .check_for_check = checks whether a player is in check
-    //  .check_for_mate = checks whether a player has any valid moves left
+    //  .makeMove = accepts a move object and updates the board and pieces object accordingly
+    //  .check_for_check = saves the game state, checks whether a player is in check, restores the game state
+    //  .check_for_mate = saves the game state, checks whether a player has any valid moves left, restores the game state
     //  .checkmate = end the game and display the winner - provide method to restart
     //  .toggle_turn = toggle the current turn between the two teams and output the corresponding message
-    //  .getDirection returns 1 for black, -1 for white - used to represent forward direction
+    //  .getDirection returns 1 for black, -1 for white - used to represent the forward direction of the current team
+    //  .debug = outputs the board object into a table beneath the game - uncomment line in processmove to enable
+    //  .promotePawn = promotes a pawn to a queen
 
+
+    //output the game board for debug purposes
+    this.debug = function () {
+
+        output_html = "<table border='1' cellpadding='1' cellspacing='1' width='300'>";
+
+        for(var i=0; i<8; i++) {
+
+            output_html += "<tr>";
+
+            for(var j=0; j<8; j++) {
+                output_html += "<td align='center'>";
+                if(this.game.board[i][j] != 99) {
+                    output_html += this.game.board[i][j];
+                }
+                else {
+                    output_html += "&nbsp;";
+                }
+                output_html += "</td>";
+            }
+
+            output_html += "</tr>";
+        }
+
+        output_html += "</table>";
+
+        $("#debug").html(output_html);
+
+    }, //end of debug()
+
+    this.promotePawn = function (pieceID) {
+
+        this.game.pieces[pieceID].description = "Queen";
+        this.game.pieces[pieceID].piece = "&#9819;";
+
+        //update the dsiplay
+        var piece_selector = "#Piece"+pieceID;
+        $(piece_selector).html(this.game.pieces[pieceID].piece);
+
+    },
 
 	//load initial game data from external file
   	this.initGame = function () {
@@ -242,6 +284,8 @@ var ChessClass = function() {
             move.invalid = true;
         } // end of check_for_check()
 
+        console.log(JSON.stringify(move));
+
         //if the move is valid then make the move
         if(move.invalid == false) { 
 
@@ -260,11 +304,17 @@ var ChessClass = function() {
             this.game.currentTurn = this.toggle_turn();
         } 
 
+        //check for pawn promotion
+        if((move.team == "White" && move.new_rank == 0) || (move.team == "Black" && move.new_rank == 7)) {
+            this.promotePawn(move.piece_id);
+        }
+
         //check if we have put the other team in check
         var chkteam = "White";
         if(move.team == "White") {
             chkteam = "Black";
         }
+
         if(this.check_for_check(chkteam)) {
             move.message = chkteam+" is in CHECK!";
         }
@@ -277,6 +327,9 @@ var ChessClass = function() {
   
         //output appropriate message
         this.outputMessage(move.message);
+
+        //output debug information
+        this.debug();
 
         //return "false" to confirm move; "true" to reject it
         return move.invalid;
@@ -674,6 +727,7 @@ var ChessClass = function() {
                         var empty_file_1 = 1;
                         var empty_file_2 = 2;
                         var new_rook_file = 3;
+                        var old_rook_file = 0;
 
                         //set the piece id's for the involved pieces
                         switch(move.team) {
@@ -699,6 +753,7 @@ var ChessClass = function() {
                         var empty_file_1 = 5;
                         var empty_file_2 = 6;
                         var new_rook_file = 5;
+                        var old_rook_file = 7;
 
                         //set the piece id's for the involved pieces
                         switch(move.team) {
@@ -728,10 +783,19 @@ var ChessClass = function() {
                             //move the rook to the proper position
                             var rook_element_id = "Piece"+rook_piece_id;
                             var new_file = new_rook_file;
-                            var castle_left = (this.game.config.space_width+this.game.config.space_border_size)*new_rook_file+this.game.config.left_edge_width;
-                            var castle_rook = document.getElementById(rook_element_id);
-                            castle_rook.style.left = castle_left+"px";
+
+                            //update the board and pieces objects
+                            this.game.board[move.old_rank][old_rook_file] = 99;
+                            this.game.board[move.new_rank][new_rook_file] = +rook_piece_id;
                             this.game.pieces[rook_piece_id].file = new_rook_file;
+                            this.game.pieces[rook_piece_id].moved = 1;
+
+                            //if this is NOT a simulation - update the location of the rook in the browser
+                            if(this.simulation == false) {
+                                var castle_left = (this.game.config.space_width+this.game.config.space_border_size)*new_rook_file+this.game.config.left_edge_width;
+                                var castle_rook = document.getElementById(rook_element_id);
+                                castle_rook.style.left = castle_left+"px";
+                            }
 
                             //confirm the valid movement of the king
                             move.message = "Valid Move - Castle.";
@@ -741,7 +805,7 @@ var ChessClass = function() {
                         else
                         {
                             //pieces are in the way
-                            move.message = "Invalid Move - there is somethig in the way.";
+                            move.message = "Invalid Move - there is something in the way.";
                             move.invalid = true;
 
                         } // end check that intermediate spaces are empty
@@ -767,6 +831,8 @@ var ChessClass = function() {
 
 
     this.makeMove = function(move) {
+
+        console.log(JSON.stringify(move));
 
         //if move is valid - update the board and pieces objects
         if(move.invalid == false) {
@@ -848,7 +914,9 @@ var ChessClass = function() {
             tstmove.team = this.game.pieces[tstmove.piece_id].team
 
             //check if the move is valid
+            this.simulation = true;
             tstmove = this.checkMove(tstmove);
+            this.simulation = false;
 
             if(tstmove.invalid == false) {
 
@@ -914,7 +982,9 @@ var ChessClass = function() {
                     testmove.team = this.game.pieces[testmove.piece_id].team;
 
                     //check if the move is valid
+                    this.simulation = true;
                     testmove = this.checkMove(testmove);
+                    this.simulation = false;
 
                     //check if a piece has been taken
                     if(this.game.board[testmove.new_rank][testmove.new_file] != 99 && testmove.invalid == false) {

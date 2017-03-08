@@ -17,6 +17,7 @@
 			black_piece_color : "#000000"
 		},
 
+		simulation : false, //used for by checkMove() when called by check_for_check and check_for_mate
 		lastMovedPiece : 99,  //used for en passant check
 		takenPieceCount : 0,
 		currentTurn : "White",

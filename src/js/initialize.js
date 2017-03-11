@@ -21,6 +21,12 @@
 		lastMovedPiece : 99,  //used for en passant check
 		takenPieceCount : 0,
 		currentTurn : "White",
+		enpassant : {
+
+			white : false,
+			black : false
+
+		},
 
 		board : [
 			[18,20,22,17,16,23,21,19],
@@ -42,7 +48,8 @@
 				file : 4,
 				piece : "&#9818;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 200
 			},
 			{
 				//piece_id = 1;
@@ -52,7 +59,8 @@
 				file : 3,
 				piece : "&#9819;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 9
 			},
 			{
 				//piece_id = 2;
@@ -62,7 +70,8 @@
 				file : 0,
 				piece : "&#9820;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 5
 			},
 			{
 				//piece_id = 3;
@@ -72,7 +81,8 @@
 				file : 7,
 				piece : "&#9820;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 5
 			},
 			{
 				//piece_id = 4;
@@ -82,7 +92,8 @@
 				file : 1,
 				piece : "&#9822;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 5;
@@ -92,7 +103,8 @@
 				file : 6,
 				piece : "&#9822;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 6;
@@ -102,7 +114,8 @@
 				file : 2,
 				piece : "&#9821;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 7;
@@ -112,7 +125,8 @@
 				file : 5,
 				piece : "&#9821;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 8;
@@ -122,7 +136,8 @@
 				file : 0,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 9;
@@ -132,7 +147,8 @@
 				file : 1,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 10;
@@ -142,7 +158,8 @@
 				file : 2,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 11;
@@ -152,7 +169,8 @@
 				file : 3,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 12;
@@ -162,7 +180,8 @@
 				file : 4,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 13;
@@ -172,7 +191,8 @@
 				file : 5,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 14;
@@ -182,7 +202,8 @@
 				file : 6,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 15;
@@ -192,7 +213,8 @@
 				file : 7,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 16;
@@ -202,7 +224,8 @@
 				file : 4,
 				piece : "&#9818;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 200
 			},
 			{
 				//piece_id = 17;
@@ -212,7 +235,8 @@
 				file : 3,
 				piece : "&#9819;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 9
 			},
 			{
 				//piece_id = 18;
@@ -222,7 +246,8 @@
 				file : 0,
 				piece : "&#9820;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 5
 			},
 			{
 				//piece_id = 19;
@@ -232,7 +257,8 @@
 				file : 7,
 				piece : "&#9820;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 5
 			},
 			{
 				//piece_id = 20;
@@ -242,7 +268,8 @@
 				file : 1,
 				piece : "&#9822;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 21;
@@ -252,7 +279,8 @@
 				file : 6,
 				piece : "&#9822;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 22;
@@ -262,7 +290,8 @@
 				file : 2,
 				piece : "&#9821;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 23;
@@ -272,7 +301,8 @@
 				file : 5,
 				piece : "&#9821;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 3
 			},
 			{
 				//piece_id = 24;
@@ -282,7 +312,8 @@
 				file : 0,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 25;
@@ -292,7 +323,8 @@
 				file : 1,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 26;
@@ -302,7 +334,8 @@
 				file : 2,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 27;
@@ -312,7 +345,8 @@
 				file : 3,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 28;
@@ -322,7 +356,8 @@
 				file : 4,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0	
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 29;
@@ -332,7 +367,8 @@
 				file : 5,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 30;
@@ -342,7 +378,8 @@
 				file : 6,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			},
 			{
 				//piece_id = 31;
@@ -352,7 +389,8 @@
 				file : 7,
 				piece : "&#9823;",
 				status : "active",
-				moved : 0
+				moved : 0,
+				material_value : 1
 			}
 		] //end pieces list
 	} // end game object

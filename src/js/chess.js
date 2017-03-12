@@ -27,6 +27,7 @@ var ChessClass = function() {
     //  .makeAIMove = makes an AI move and updates the game status
     //  .getAIMove = returns the "best" AI move for a given team
     //  .evalAIMove = used by getMove to evaluate each potential move in order to determine the best one
+    //  .testMove = returns true if the move is valid; false if the move is invalid; accepts a piece_id, rank and file
 
 
     //output the game board for debug purposes
@@ -1170,7 +1171,8 @@ var ChessClass = function() {
         //generate an empty move
         var move = {};
         var bestMove = {};
-        bestMove.score = -10000;
+        bestMove.score = {};
+        bestMove.score.overall = -100000;
         bestMove.invalid = true;
 
         //alert(this.game.currentTurn);
@@ -1255,13 +1257,10 @@ var ChessClass = function() {
                         if (move.invalid == false) {
 
                             valid_moves++;
-
-                            //alert(move.message);
-                            alert("WTF?");
                             move.score = this.evalAIMove(move);
 
                             //if this is the best move - store it
-                            if(move.score >= bestMove.score) {
+                            if(move.score.overall >= bestMove.score.overall) {
                                 bestMove = JSON.parse(JSON.stringify(move));
                             }
 
@@ -1278,7 +1277,7 @@ var ChessClass = function() {
             alert("no valid move found");
             //trigger checkmate    
         }
-        console.log("Making Move w/ Score: "+bestMove.score);
+        console.log(JSON.stringify(bestMove.score));
         return bestMove;
 
     } // end of getMove();
@@ -1311,124 +1310,223 @@ var ChessClass = function() {
                 break;
         } // end switch to set the range of piece ID numbers
 
-        //calculate the material value for our team
-        var our_material_value = 0;
-        for(var i=our_first_piece+1;i<=our_last_piece;i++) {
-            if(this.game.pieces[i].status != "taken") {
-                our_material_value += this.game.pieces[i].material_value;
-            }
-        }
+        var score = {};
+        score.our_total_material = 0;
+        score.their_total_material = 0;
+        score.our_material_under_attack = 0;
+        score.their_material_under_attack = 0;
+        score.our_material_defended = 0;
+        score.their_material_defended = 0;
+        score.our_center_control = 0;
+        score.their_center_control = 0;
+        score.our_valid_move_count = 0;
+        score.their_valid_move_count = 0;
 
-        //calculate the material value for the other team
-        var their_material_value = 0;
-        for(var i=their_first_piece+1;i<=their_last_piece;i++) {
-            if(this.game.pieces[i].status != "taken") {
-                their_material_value += this.game.pieces[i].material_value;
-            }
-        }
+        //initialize a temporary target variable
+        var target_id = 0;
 
-        //count how many of our pieces are under attack
-        var our_pieces_under_attack = 0;
-        var this_rank = 0;
-        var this_file = 0;
+        //loop over all of our valid moves
+        for(var our_current_piece = our_first_piece; our_current_piece<=our_last_piece; our_current_piece++) {
 
-        for(var our_current_piece = our_first_piece; our_current_piece <= our_last_piece; our_current_piece++) {
-
+            //check if this piece has already been taken
             if(this.game.pieces[our_current_piece].status != "taken") {
 
-                this_rank = this.game.pieces[our_current_piece].rank;
-                this_file = this.game.pieces[our_current_piece].file;
+                score.our_total_material += this.game.pieces[our_current_piece].material_value;
 
+                //loop over all board square and check if this piece can move there
+                for(var i=0; i<=7; i++) {
+                    for(var j=0; j<=7; j++) {
 
-                //loop over opposing team's pieces checking if they can take this piece
-                for(var their_current_piece = their_first_piece; their_current_piece<=their_last_piece; their_current_piece++) {
+                        //check if this is a valid move
+                        if(this.testMove(our_current_piece,i,j,1)) {
 
-                    if (this.game.pieces[their_current_piece].status != "taken") {
+                            target_id = this.game.board[i][j];
 
-                        var tstMove = {};
+                            //check if we are attacking a piece
+                            if(target_id != 99) {
 
-                        //build move object
-                        tstMove.new_rank = this_rank;
-                        tstMove.new_file = this_file;
-                        tstMove.piece_id = their_current_piece;
-                        tstMove.old_rank = this.game.pieces[tstMove.piece_id].rank;            
-                        tstMove.old_file = this.game.pieces[tstMove.piece_id].file;
-                        tstMove.piece_type = this.game.pieces[tstMove.piece_id].description;
-                        tstMove.invalid = true;
-                        tstMove.message = "First AI Move.";
-                        tstMove.pieceTaken = false;
-                        tstMove.takenPiece = 99;
-                        tstMove.direction = this.getDirection(tstMove.piece_id);
-                        tstMove.team = this.game.pieces[this.game.board[tstMove.old_rank][tstMove.old_file]].team
+                                //check if we are defending one of our own pieces
+                                if(target_id >= our_first_piece && target_id<=our_last_piece) {
 
-                        //check if the move is a valid move for the current piece to make
-                        tstMove = this.checkMove(tstMove);
+                                    //we are defending one of our own pieces
+                                    score.our_material_defended += this.game.pieces[target_id].material_value;
 
-                        //check if we are physically trying to take a king
-                        if(this.game.board[tstMove.new_rank][tstMove.new_file] != 99) {
-                            if(this.game.pieces[this.game.board[tstMove.new_rank][tstMove.new_file]].description == "King") {
-                                tstMove.invalid = true;
-                                tstMove.message = "You cannot take the king.";
-                            }
-                        }
-
-                        //check if a piece has been taken
-                        if(this.game.board[tstMove.new_rank][tstMove.new_file] != 99 && tstMove.invalid == false) {
-
-                            //check if the piece is on our team
-                            if (this.game.pieces[this.game.board[tstMove.new_rank][tstMove.new_file]].team == tstMove.team) {
-                                tstMove.invalid = true;
-                                tstMove.message = "Invalid Move. You cannot take your own piece.";
+                                } // end of check if we are tacking our own piece
+                                else
+                                {
+                                    //we are attacking one of our opponents pieces
+                                    score.their_material_under_attack += this.game.pieces[target_id].material_value;
+                                    score.our_valid_move_count++;
+                                }
                             }
                             else
                             {
-                                tstMove.pieceTaken = true;
-                                tstMove.takenPiece = this.game.board[tstMove.new_rank][tstMove.new_file];
-                                tstMove.message = "Piece Taken!";
+                                score.our_valid_move_count++;
                             }
-                        }
 
-                        //check whether the player is moving into check
-                        if(this.check_for_check(tstMove)) {
-                            tstMove.message = "Invalid Move. You cannot move into CHECK.";
-                            tstMove.invalid = true;
-                        } // end of check_for_check()
+                            //check if we are controlling a center square
+                            if(i>2 && i<5 && j>2 && j<5) {
+                                score.our_center_control++;
+                            }
 
-                        //if we have found a valid then let's evaluate it
-                        if (tstMove.invalid == false) {
+                        } //end test for a valid move
 
-                            //this piece is under attack - so count it
-                            our_pieces_under_attack += this.game.pieces[our_current_piece].material_value;
+                    } //end loop over files
+                } //end loop over ranks
+            } //end of check that this piece has not been taken
+        } // end loop over our pieces
 
-                            //escape from the loop
-                            their_current_piece = their_last_piece + 1;
+        //loop over all of their valid moves
+        for(var their_current_piece = their_first_piece; their_current_piece<=their_last_piece; their_current_piece++) {
 
-                        } // end check if the move is truly valid
-                    }//end check that their piece has not been taken already
-                } //end of loop over their pieces
-            } //end check that our piece has not been taken already
-        } // end of loop over our pieces
+            //check if this piece has already been taken
+            if(this.game.pieces[their_current_piece].status != "taken") {
+
+                score.their_total_material += this.game.pieces[their_current_piece].material_value;
+
+                //loop over all board square and check if this piece can move there
+                for(var i=0; i<=7; i++) {
+                    for(var j=0; j<=7; j++) {
+
+                        //check if this is a valid move
+                        if(this.testMove(their_current_piece,i,j,1)) {
+
+                            target_id = this.game.board[i][j];
+
+                            //check if we are attacking a piece
+                            if(target_id != 99) {
+
+                                //check if we are defending one of their own pieces
+                                if(target_id >= their_first_piece && target_id<=their_last_piece) {
+
+                                    //we are defending one of their own pieces
+                                    score.their_material_defended += this.game.pieces[target_id].material_value;
+
+                                } // end of check if we are tacking their own piece
+                                else
+                                {
+                                    //we are attacking one of their opponents pieces
+                                    score.our_material_under_attack += this.game.pieces[target_id].material_value;
+                                    score.their_valid_move_count++;
+                                }
+                            }
+                            else
+                            {
+                                score.their_valid_move_count++;
+                            }
+
+                            //check if we are controlling a center square
+                            if(i>2 && i<5 && j>2 && j<5) {
+                                score.their_center_control++;
+                            }
+
+                        } //end test for a valid move
+
+                    } //end loop over files
+                } //end loop over ranks
+            } //end of check that this piece has not been taken
+        } // end loop over their pieces
 
 
-
-        //pieces that are attacking
-        
-    
-        //number of valid moves available to the moving team
-        //number of valid moves available to the oppposing team
-        //number of pieces that are protected
-        //number of opposing team pieces that are protected
         
         //restore the game from the backup
         this.game = JSON.parse(JSON.stringify(backupGame));
         
         //calculate the final score
-        var score = (our_material_value - their_material_value) - 0.5*(our_pieces_under_attack);
+        score.overall = (score.our_total_material - score.their_total_material) + (score.their_material_under_attack - score.our_material_under_attack) + (score.our_valid_move_count - score.their_valid_move_count) + (score.our_material_defended - score.their_material_defended) + (score.our_center_control - score.their_center_control);
         
         //return the score
         return score;
 
     }
+
+    this.testMove = function(piece, rank, file, allow_friendly_fire) {
+
+        //returns true if the move is valid
+        //returns false if the move is invalid
+
+        if (this.game.pieces[piece].status != "taken") {
+
+            var tstMove = {};
+
+            //build move object
+            tstMove.new_rank = rank;
+            tstMove.new_file = file;
+            tstMove.piece_id = piece;
+            tstMove.old_rank = this.game.pieces[tstMove.piece_id].rank;            
+            tstMove.old_file = this.game.pieces[tstMove.piece_id].file;
+            tstMove.piece_type = this.game.pieces[tstMove.piece_id].description;
+            tstMove.invalid = true;
+            tstMove.message = "This move is invalid";
+            tstMove.pieceTaken = false;
+            tstMove.takenPiece = 99;
+            tstMove.direction = this.getDirection(tstMove.piece_id);
+            tstMove.team = this.game.pieces[this.game.board[tstMove.old_rank][tstMove.old_file]].team
+
+
+            //check if we are physically trying to take a king
+            if(this.game.board[tstMove.new_rank][tstMove.new_file] != 99 && this.game.pieces[this.game.board[tstMove.new_rank][tstMove.new_file]].description == "King") {
+                
+                //you cannot physically take the king
+                return false;
+            }
+            else
+            {
+                //check if the move is a valid move for the current piece to make
+                tstMove = this.checkMove(tstMove);
+                if(tstMove.invalid == false) {
+
+                    //check whether the player is trying to move into check
+                    if(this.check_for_check(tstMove)) {
+                        
+                        //a player may not move into check
+                        return false;
+
+                    } // end of check_for_check() returned true (moving into check)
+                    else
+                    {
+                        //not moving into check - check if friendly_fire is allowed
+                        if(allow_friendly_fire == 1) {
+
+                            //seems to be valid move
+                            return true;
+
+                        } // end of friendly_fire is allowed
+                        else
+                        {
+                            //check if we are trying to take our own piece
+                            if (this.game.pieces[this.game.board[tstMove.new_rank][tstMove.new_file]].team == tstMove.team) {
+                            
+                                //you can't take your own piece
+                                return false;
+                        
+                            }
+                            else
+                            {
+                                return true;
+                            }
+
+                        } // end of friendly_fire is not allowed
+
+                    } // end of check_for_check() returned false (not moving into check)
+
+                } //end check for valid move
+                else
+                {
+                    //this piece is not able to move in that way
+                    return false;
+                }
+
+            } // else - we are not trying to take the king
+
+        }//end check that their piece has not been taken already
+        else
+        {
+            //pieces that have already been taken are not allowed to move anymore
+            return false;
+        }
+
+    } // end testMove()
 
 } // end ChessClass()
 

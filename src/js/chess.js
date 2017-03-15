@@ -172,6 +172,7 @@ var ChessClass = function() {
         
         // load the html to display the summary
         $("#message_text" ).html(text);
+
     }, // end of outputMessage()
 
 	//clear the board from the screen
@@ -321,17 +322,17 @@ var ChessClass = function() {
                 this.clearPiece(move.takenPiece);
             }
 
+            //check for pawn promotion
+            if((move.team == "White" && move.new_rank == 0) || (move.team == "Black" && move.new_rank == 7)) {
+                this.promotePawn(move.piece_id);
+            }
+
             //track the last moved piece
             this.game.lastMovedPiece = move.piece_id;
 
             //toggle the move
             this.game.currentTurn = this.toggle_turn();
         } 
-
-        //check for pawn promotion
-        if((move.team == "White" && move.new_rank == 0) || (move.team == "Black" && move.new_rank == 7)) {
-            this.promotePawn(move.piece_id);
-        }
 
         //check if we have put the other team in check
         var chkteam = "White";
@@ -344,16 +345,20 @@ var ChessClass = function() {
         }
 
         if(this.check_for_mate(chkteam)) {
-            $("#turnMessage").html("CHECKMATE! "+move.team+" Wins!");
-            move.message = "<button style='position: absolute; top: 5px; left: 120px;' onclick='javascript:location.reload();''>Click Here to Play Again</button>";
-            $("#message_text" ).height("40px");
-        }
-  
-        //output appropriate message
-        this.outputMessage(move.message);
 
-        //output debug information
-        this.debug();
+            this.checkmate(move);
+
+        }
+        else
+        {
+  
+            //output appropriate message
+            this.outputMessage(move.message);
+
+            //output debug information
+            this.debug();
+
+        }
 
         //move.invalid="false" to confirm move; "true" to reject it
         if (move.invalid == false) {
@@ -365,8 +370,10 @@ var ChessClass = function() {
             return;
         }
 
-        //make an AI move
-        this.makeAIMove();
+        if(this.game.checkMate == 0) {
+            //make an AI move
+            this.makeAIMove();
+        }
 
         return true;
 
@@ -929,14 +936,14 @@ var ChessClass = function() {
 
             case "Black" :
                 //checking if black is in check, so loop over white pieces
-                var start_piece = 1
+                var start_piece = 0
                 var end_piece = 15;
                 var king_id = 16;
                 break;
 
             case "White" :
                 //checking if White is in check, so loop over black pieces
-                var start_piece = 17;
+                var start_piece = 16;
                 var end_piece = 31;
                 var king_id = 0;
                 break;
@@ -1084,8 +1091,12 @@ var ChessClass = function() {
     }, // end of check_for_mate()
 
 
-    this.checkmate = function(team) {
-        this.outputMessage("CHECKMATE!");
+    this.checkmate = function(move) {
+        this.game.checkMate = 1;
+        $("#turnMessage").html("CHECKMATE! "+move.team+" Wins!");
+        move.message = "<button style='position: absolute; top: 5px; left: 120px;' onclick='javascript:location.reload();''>Click Here to Play Again</button>";
+        $("#message_text" ).height("40px");
+        this.outputMessage(move.message);
     }, // end of checkmate()
 
     this.toggle_turn = function() {
@@ -1148,9 +1159,7 @@ var ChessClass = function() {
         }
 
         if(this.check_for_mate(chkteam)) {
-            $("#turnMessage").html("CHECKMATE! "+move.team+" Wins!");
-            move.message = "<button style='position: absolute; top: 5px; left: 120px;' onclick='javascript:location.reload();''>Click Here to Play Again</button>";
-            $("#message_text" ).height("40px");
+            this.checkmate(move);
         }
   
         //redraw the board to reflect the changes
@@ -1274,8 +1283,10 @@ var ChessClass = function() {
         } // end loop over all pieces
 
         if(bestMove.invalid == true) {
-            alert("no valid move found");
-            //trigger checkmate    
+            
+            //no valid move was found - CHECKMATE
+            this.checkmate(move);
+
         }
         console.log(JSON.stringify(bestMove.score));
         return bestMove;
@@ -1321,6 +1332,10 @@ var ChessClass = function() {
         score.their_center_control = 0;
         score.our_valid_move_count = 0;
         score.their_valid_move_count = 0;
+        score.this_move_defense_count = 0;
+        score.this_move_defense_material = 0;
+        score.this_move_attack_count = 0;
+        score.this_move_attack_material = 0;
 
         //initialize a temporary target variable
         var target_id = 0;
@@ -1347,6 +1362,19 @@ var ChessClass = function() {
 
                                 //check if we are defending one of our own pieces
                                 if(target_id >= our_first_piece && target_id<=our_last_piece) {
+
+                                    //check if the piece we are moving is defended
+                                    if(i==move.new_rank && j==move.new_file) {
+                                        
+                                        //track how many pieces are defending this piece
+                                        score.this_move_defense_count++;
+                                        
+                                        //track the material value of the most valuable piece defending this move
+                                        if(this.game.pieces[our_current_piece].material_value > score.this_move_defense_material) {
+                                            score.this_move_defense_material += this.game.pieces[our_current_piece].material_value;
+                                        }
+                                    }
+
 
                                     //we are defending one of our own pieces
                                     score.our_material_defended += this.game.pieces[target_id].material_value;
@@ -1396,15 +1424,28 @@ var ChessClass = function() {
                             //check if we are attacking a piece
                             if(target_id != 99) {
 
-                                //check if we are defending one of their own pieces
+                                //check if they are defending one of their own pieces
                                 if(target_id >= their_first_piece && target_id<=their_last_piece) {
 
-                                    //we are defending one of their own pieces
+                                    //they are defending one of their own pieces
                                     score.their_material_defended += this.game.pieces[target_id].material_value;
 
                                 } // end of check if we are tacking their own piece
                                 else
                                 {
+
+                                    //check if the piece we are moving is under attack
+                                    if(i==move.new_rank && j==move.new_file) {
+
+                                        //count how many pieces are attacking this piece
+                                        score.this_move_attack_count++;
+
+                                        //keep track of the most valuable piece attacking this piece
+                                        if (this.game.pieces[their_current_piece].material_value > score.this_move_attack_material) {
+                                            score.this_move_attack_material = this.game.pieces[their_current_piece].material_value;
+                                        }
+                                    }
+
                                     //we are attacking one of their opponents pieces
                                     score.our_material_under_attack += this.game.pieces[target_id].material_value;
                                     score.their_valid_move_count++;
@@ -1432,8 +1473,17 @@ var ChessClass = function() {
         //restore the game from the backup
         this.game = JSON.parse(JSON.stringify(backupGame));
         
+        //calculate atttack/defense balance
+        score.attack_defense_balance = 0;
+        if(score.this_move_attack_material !=0) {
+            score.attack_defense_balance = score.this_move_attack_material - this.game.pieces[move.piece_id].material_id;    
+        }
+        if(score.this_move_attack_count > score.this_move_defense_count) {
+            score.attack_defense_balance = -1*(score.this_move_defense_material+this.game.pieces[move.piece_id].material_value);
+        }
+
         //calculate the final score
-        score.overall = (score.our_total_material - score.their_total_material) + (score.their_material_under_attack - score.our_material_under_attack) + (score.our_valid_move_count - score.their_valid_move_count) + (score.our_material_defended - score.their_material_defended) + (score.our_center_control - score.their_center_control);
+        score.overall = (score.our_total_material - score.their_total_material) + (score.their_material_under_attack - score.our_material_under_attack) + (score.our_valid_move_count - score.their_valid_move_count) + (score.our_material_defended - score.their_material_defended) + (score.our_center_control - score.their_center_control) + score.attack_defense_balance;
         
         //return the score
         return score;
